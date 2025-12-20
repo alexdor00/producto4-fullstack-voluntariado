@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Voluntariados</title>
+
+    <!-- Bootstrap CSS -->
+    <link 
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+        rel="stylesheet"
+    >
+
+    <!-- Google Fonts - Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" 
+        rel="stylesheet"
+    >
+
+    <!-- CSS Común -->
+    <link rel="stylesheet" href="../css/common.css">
+    
+    <!-- CSS Específico de Voluntariados -->
+    <link rel="stylesheet" href="../css/voluntariados.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">ANIMAL CARE</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../index.html">DASHBOARD</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../pages/login.html">LOGIN</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="../pages/voluntariados.html">VOLUNTARIADOS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../pages/usuarios.html">ALTA USUARIO</a>
+                    </li>
+                </ul>
+                <span class="navbar-text">
+                    USUARIO: <strong id="usuarioActivoLabel">NO LOGIN</strong>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container my-4">
+        
+        <!-- TÍTULO PRINCIPAL -->
+        <div class="text-center mb-4">
+            <div class="bg-secondary bg-opacity-50 py-3 rounded">
+                <h1 class="fw-bold text-uppercase mb-0">Gestión de Voluntariados</h1>
+            </div>
+        </div>
+        
+        <div class="row">
+            
+            <!-- COLUMNA IZQUIERDA: FORMULARIO -->
+            <div class="col-lg-5 mb-4">
+                <div class="card text-white">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">ALTA DE VOLUNTARIADO</h3>
+                        
+                        <form id="formVoluntariado">
+                            
+                            <div class="mb-3">
+                                <label for="titulo" class="form-label">TÍTULO</label>
+                                <input type="text" class="form-control" 
+                                    id="titulo" name="titulo" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">EMAIL</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="fecha" class="form-label">FECHA</label>
+                                <input type="date" class="form-control" 
+                                    id="fecha" name="fecha" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">DESCRIPCIÓN</label>
+                                <textarea class="form-control" 
+                                        id="descripcion" name="descripcion" rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="tipo" class="form-label">TIPO</label>
+                                <select class="form-select" 
+                                        id="tipo" name="tipo" required>
+                                    <option value="Petición" selected>PETICIÓN</option>
+                                    <option value="Oferta">OFERTA</option>
+                                </select>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary">DAR DE ALTA</button>
+                            </div>
+
+                            <!-- Alerta de feedback -->
+                            <div id="alerta" class="alert mt-3 d-none" role="alert"></div>
+                            
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card text-white">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">CONSULTA Y BORRADOS DE VOLUNTARIADOS</h3>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-dark table-striped table-bordered">
+                                <thead>
+                                    <tr class="text-center">
+                                        <th>TÍTULO</th>
+                                        <th>EMAIL</th>
+                                        <th>FECHA</th>
+                                        <th>DESCRIPCIÓN</th>
+                                        <th>TIPO</th>
+                                        <th>ACCIONES</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaVoluntariados">
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+
+            
+        </div>
+
+        <!-- SECCIÓN DE GRÁFICO -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card text-white">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">GRÁFICO DE VOLUNTARIADOS</h3>
+                        <div class="d-flex justify-content-center">
+                            <canvas id="graficoVoluntariados" width="800" height="400"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript como módulo -->
+    <script type="module" src="../js/voluntariados.js"></script>
+
+</body>
+</html>
+

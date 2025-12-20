@@ -1,0 +1,163 @@
+/* ============================================
+   ESTILOS ESPECÍFICOS DEL LOGIN
+   Página 2 del mockup AnimalCare.pdf
+   ============================================ */
+
+/* CONTENEDOR PRINCIPAL CENTRADO */
+.min-vh-100 {
+    min-height: 100vh;
+}
+
+/* CONTENEDOR DEL LOGIN */
+.login-container {
+    width: 100%;
+    max-width: 600px;
+    background-color: transparent;
+    border: 3px solid #9b8e7e;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.6s ease-in;
+}
+
+/* HEADER DEL LOGIN */
+.login-header {
+    background-color: #9b8e7e;
+    padding: 1.5rem;
+    text-align: center;
+    border-bottom: 3px solid #2c2c2c;
+}
+
+.login-title {
+    color: #2c2c2c;
+    font-size: 1.8rem;
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+/* CUERPO DEL LOGIN */
+.login-body {
+    background-color: #2c2c2c;
+    padding: 2.5rem 2rem;
+}
+
+/* ETIQUETAS DEL FORMULARIO */
+.login-body .form-label {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* INPUTS DEL FORMULARIO */
+.login-body .form-control {
+    background-color: #b89080 !important;
+    border: none !important;
+    color: #2c2c2c !important;
+    font-weight: 500;
+    padding: 1rem;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.login-body .form-control::placeholder {
+    color: #5a5a5a;
+    opacity: 0.8;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+.login-body .form-control:focus {
+    background-color: #c99f8f !important;
+    box-shadow: 0 0 0 0.2rem rgba(184, 144, 128, 0.5) !important;
+    color: #2c2c2c !important;
+    outline: none;
+}
+
+/* BOTÓN DE LOGIN */
+.btn-login {
+    background-color: #2962ff;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0.9rem 3rem;
+    border: none;
+    border-radius: 4px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+    background-color: #1e4ed8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(41, 98, 255, 0.4);
+}
+
+/* MENSAJE DE ERROR */
+.alert-danger {
+    background-color: #ff4444;
+    border: none;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: center;
+    border-radius: 4px;
+}
+
+/* FOOTER DEL LOGIN */
+.login-footer {
+    background-color: #9b8e7e;
+    padding: 1rem;
+    text-align: center;
+    border-top: 3px solid #2c2c2c;
+}
+
+.login-footer p {
+    color: #2c2c2c;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+}
+
+/* RESPONSIVE - TABLET */
+@media (max-width: 768px) {
+    .login-container {
+        max-width: 90%;
+        margin: 2rem auto;
+    }
+    
+    .login-title {
+        font-size: 1.5rem;
+    }
+    
+    .login-body {
+        padding: 2rem 1.5rem;
+    }
+}
+
+/* RESPONSIVE - MÓVIL */
+@media (max-width: 576px) {
+    .login-container {
+        max-width: 95%;
+    }
+    
+    .login-title {
+        font-size: 1.3rem;
+    }
+    
+    .login-body {
+        padding: 1.5rem 1rem;
+    }
+    
+    .btn-login {
+        padding: 0.8rem 2rem;
+        font-size: 0.9rem;
+    }
+}

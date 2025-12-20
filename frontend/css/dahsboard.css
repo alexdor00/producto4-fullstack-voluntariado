@@ -1,0 +1,286 @@
+/* HERO SECTION CON IMAGEN DE FONDO */
+.hero-section {
+    position: relative;
+    min-height: 450px;
+    background-image: url('../img/gato.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.hero-title {
+    color: #ffffff;
+    font-size: 4.5rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.8);
+    margin-bottom: 2.5rem;
+    text-transform: uppercase;
+}
+
+/* BOTONES DE FILTRO */
+.filter-buttons {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-filter {
+    padding: 1rem 3rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.btn-oferta {
+    background-color: rgba(155, 142, 126, 0.9);
+    color: #2c2c2c;
+}
+
+.btn-oferta:hover {
+    background-color: rgba(155, 142, 126, 1);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(155, 142, 126, 0.6);
+}
+
+.btn-oferta.active {
+    background-color: #9b8e7e;
+    color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(155, 142, 126, 0.5);
+    transform: scale(1.05);
+}
+
+.btn-peticion {
+    background-color: rgba(74, 67, 64, 0.95);
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-peticion:hover {
+    background-color: rgba(74, 67, 64, 1);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(74, 67, 64, 0.8);
+}
+
+.btn-peticion.active {
+    background-color: #4a4340;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 4px rgba(74, 67, 64, 0.6);
+    transform: scale(1.05);
+}
+
+/* TARJETAS DE VOLUNTARIADOS */
+.card-voluntariado {
+    background: rgba(74, 67, 64, 0.85);
+    backdrop-filter: blur(8px);
+    border: 3px solid;
+    border-radius: 10px;
+    color: #ffffff;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    height: 100%;
+    animation: fadeIn 0.6s ease-in;
+    padding: 1.5rem;
+    cursor: grab;
+}
+
+.card-voluntariado:active {
+    cursor: grabbing;
+}
+
+.card-voluntariado.dragging {
+    opacity: 0.5;
+}
+
+.card-voluntariado.oferta {
+    border-color: #9b8e7e;
+    background: rgba(155, 142, 126, 0.5);
+}
+
+.card-voluntariado.peticion {
+    border-color: #4a4340;
+    background: rgba(74, 67, 64, 0.7);
+}
+
+.card-voluntariado:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.card-voluntariado .card-body {
+    padding: 0;
+}
+
+.card-voluntariado .card-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+    line-height: 1.3;
+}
+
+.card-voluntariado .descripcion {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    color: #ffffff;
+    font-weight: 400;
+}
+
+.card-voluntariado .descripcion::before {
+    content: "• ";
+    margin-right: 0.5rem;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.card-voluntariado .info-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    margin-top: 1.5rem;
+}
+
+.card-voluntariado .fecha {
+    font-weight: 700;
+    color: #ffffff;
+    font-size: 1rem;
+}
+
+.card-voluntariado .usuario {
+    color: #ffffff;
+    font-weight: 400;
+}
+
+/* ZONA DE SELECCION (DROP ZONE) */
+.zona-seleccion {
+    min-height: 300px;
+    background-color: rgba(74, 67, 64, 0.3);
+    border: 3px dashed #9b8e7e;
+    border-radius: 10px;
+    padding: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-start;
+    align-content: flex-start;
+    transition: all 0.3s ease;
+}
+
+.zona-seleccion.drag-over {
+    background-color: rgba(155, 142, 126, 0.2);
+    border-color: #8ab893;
+    border-style: solid;
+}
+
+.texto-placeholder {
+    width: 100%;
+    text-align: center;
+    color: #9b8e7e;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: auto;
+}
+
+.zona-seleccion:not(:empty) .texto-placeholder {
+    display: none;
+}
+
+/* TARJETA EN ZONA DE SELECCION */
+.tarjeta-seleccionada {
+    background: rgba(155, 142, 126, 0.9);
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    padding: 1rem;
+    color: #2c2c2c;
+    min-width: 250px;
+    max-width: 300px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tarjeta-seleccionada:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.tarjeta-seleccionada .titulo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.tarjeta-seleccionada .tipo {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* RESPONSIVE */
+@media (max-width: 991px) {
+    .hero-title {
+        font-size: 3rem;
+    }
+    
+    .btn-filter {
+        padding: 0.9rem 2.5rem;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .card-voluntariado {
+        padding: 1.2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .filter-buttons {
+        gap: 1rem;
+    }
+    
+    .btn-filter {
+        padding: 0.7rem 1.8rem;
+        font-size: 0.9rem;
+    }
+}

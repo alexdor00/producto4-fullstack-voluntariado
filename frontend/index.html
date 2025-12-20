@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Animal Care</title>
+
+    <!-- Bootstrap para el diseño -->
+    <link 
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+        rel="stylesheet"
+    >
+
+    <!-- Fuente Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" 
+        rel="stylesheet"
+    >
+
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+    <!-- Menu de navegacion -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">ANIMAL CARE</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">DASHBOARD</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pages/login.html">LOGIN</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pages/voluntariados.html">VOLUNTARIADOS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pages/usuarios.html">ALTA USUARIO</a>
+                    </li>
+                </ul>
+                <span class="navbar-text" id="userStatus">-NO LOGIN-</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero con imagen de fondo -->
+    <section class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">ANIMAL CARE</h1>
+            
+            <!-- Botones para filtrar -->
+            <div class="filter-buttons">
+                <button id="btnOferta" class="btn-filter btn-oferta" type="button">
+                    OFERTA
+                </button>
+                <button id="btnPeticion" class="btn-filter btn-peticion" type="button">
+                    PETICION
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <main class="container my-4">
+        
+        <!-- Voluntariados disponibles -->
+        <section class="mb-5">
+            <h2 class="text-center text-white mb-4">VOLUNTARIADOS DISPONIBLES</h2>
+            <div id="gridVoluntariados" class="row g-4"></div>
+        </section>
+
+        <!-- Zona donde se arrastran los seleccionados -->
+        <section>
+            <h2 class="text-center text-white mb-4">MIS VOLUNTARIADOS SELECCIONADOS</h2>
+            <div id="zonaSeleccion" class="zona-seleccion">
+                <!-- Las tarjetas se agregan aqui -->
+            </div>
+        </section>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+
+</body>
+</html>

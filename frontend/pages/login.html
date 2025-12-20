@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Animal Care</title>
+
+    <!-- Bootstrap CSS -->
+    <link 
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+        rel="stylesheet"
+    >
+
+    <!-- Google Fonts - Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" 
+        rel="stylesheet"
+    >
+
+    <!-- CSS Común -->
+    <link rel="stylesheet" href="../css/common.css">
+    
+    <!-- CSS Específico del Login -->
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="../index.html">ANIMAL CARE</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../index.html">DASHBOARD</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="../pages/login.html">LOGIN</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../pages/voluntariados.html">VOLUNTARIADOS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../pages/usuarios.html">ALTA USUARIO</a>
+                    </li>
+                </ul>
+                <span class="navbar-text" id="userStatus">-NO LOGIN-</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="container d-flex justify-content-center align-items-center min-vh-100">
+        <div class="login-container">
+            
+            <!-- TÍTULO -->
+            <div class="login-header">
+                <h2 class="login-title">INICIAR SESIÓN</h2>
+            </div>
+            
+            <!-- FORMULARIO -->
+            <div class="login-body">
+                <form id="formLogin">
+                    
+                    <div class="mb-3">
+                        <label for="emailLogin" class="form-label">CORREO ELECTRÓNICO</label>
+                        <input 
+                            type="email" 
+                            class="form-control" 
+                            id="emailLogin" 
+                            name="emailLogin"
+                            placeholder="INTRODUCE TU CORREO ELECTRÓNICO"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="passwordLogin" class="form-label">CONTRASEÑA</label>
+                        <input 
+                            type="password" 
+                            class="form-control" 
+                            id="passwordLogin" 
+                            name="passwordLogin"
+                            placeholder="INTRODUCE TU CONTRASEÑA"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-login">INICIAR SESIÓN</button>
+                    </div>
+                    
+                    <!-- Mensaje de error -->
+                    <div id="mensajeError" class="alert alert-danger mt-3 d-none" role="alert">
+                        Usuario o contraseña incorrectos
+                    </div>
+                    
+                </form>
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="login-footer">
+                <p class="mb-0">ANIMAL CARE</p>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript como módulo -->
+    <script type="module" src="../js/login.js"></script>
+
+</body>
+</html>
+
