@@ -1,79 +1,77 @@
-import { MongoClient } from 'mongodb';
-// configuracion
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = 'voluntariadosDB';
+// backend/src/config/database.js
 
-// variables globales de conexion
-let db = null;
-let client = null;
+import mongoose from 'mongoose';
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/voluntariadosDB';
+
 let isConnected = false;
 
 /**
- * conecta a la base de datos mongodb
- * @returns {Promise<Object>} instancia de la base de datos
+ * Conecta a MongoDB usando Mongoose
+ * @returns {Promise<boolean>} true si conecta exitosamente
  */
 export async function connectDB() {
     try {
-        if (db) {
-            console.log('[db] ya conectado a mongodb');
-            isConnected = true;
-            return db;
+        if (isConnected) {
+            console.log('[mongoose] Ya conectado a MongoDB');
+            return true;
         }
 
-        console.log('[db] intentando conectar a mongodb...');
-        console.log('[db] uri:', MONGODB_URI.replace(/\/\/.*:.*@/, '//****:****@'));
+        console.log('[mongoose] Conectando a MongoDB...');
+        console.log('[mongoose] URI:', MONGODB_URI.replace(/\/\/.*:.*@/, '//****:****@'));
         
-        client = new MongoClient(MONGODB_URI, {
+        await mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 5000,
-            connectTimeoutMS: 10000
+            socketTimeoutMS: 45000,
         });
         
-        await client.connect();
-        db = client.db(DB_NAME);
         isConnected = true;
         
-        console.log('[db] conectado exitosamente a mongodb');
-        console.log('[db] base de datos:', DB_NAME);
+        console.log('[mongoose] ✅ Conectado exitosamente a MongoDB');
+        console.log('[mongoose] Base de datos:', mongoose.connection.name);
         
-        return db;
+        // Eventos de mongoose
+        mongoose.connection.on('error', (err) => {
+            console.error('[mongoose] Error de conexión:', err);
+        });
+        
+        mongoose.connection.on('disconnected', () => {
+            console.warn('[mongoose] Desconectado de MongoDB');
+            isConnected = false;
+        });
+        
+        return true;
         
     } catch (error) {
-        console.warn('[db warning] no se pudo conectar a mongodb:', error.message);
-        console.warn('[db warning] usando almacenamiento en memoria como respaldo');
+        console.error('[mongoose] ❌ Error al conectar:', error.message);
         isConnected = false;
-        return null;
+        return false;
     }
 }
 
 /**
- * obtiene la instancia de la base de datos
- * @returns {Object} instancia de la base de datos
- * @throws {Error} si la bd no esta inicializada
+ * Verifica si Mongoose está conectado
+ * @returns {boolean}
  */
+export function isMongoConnected() {
+    return isConnected && mongoose.connection.readyState === 1;
+}
+
+/**
+ * Cierra la conexión de Mongoose
+ */
+export async function closeDB() {
+    if (isConnected) {
+        await mongoose.connection.close();
+        isConnected = false;
+        console.log('[mongoose] Conexión cerrada');
+    }
+}
+
+// Exportación para compatibilidad (ya no se usa pero por si acaso)
 export function getDB() {
     if (!isConnected) {
         return null;
     }
-    return db;
-}
-
-/**
- * verifica si mongodb esta conectado
- * @returns {Boolean} true si esta conectado
- */
-export function isMongoConnected() {
-    return isConnected;
-}
-
-/**
- * cierra la conexion a la base de datos
- */
-export async function closeDB() {
-    if (client) {
-        await client.close();
-        db = null;
-        client = null;
-        isConnected = false;
-        console.log('[db] conexion cerrada');
-    }
+    return mongoose.connection.db;
 }
