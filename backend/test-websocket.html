@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>prueba websockets - voluntariados</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .contenedor {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .estado {
+            padding: 12px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .conectado { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
+        }
+        .desconectado { 
+            background: #f8d7da; 
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .registro {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .instrucciones {
+            color: #666;
+            margin-top: 25px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 3px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="contenedor">
+        <h1>prueba de websockets - voluntariados</h1>
+        
+        <div id="estado" class="estado desconectado">
+            desconectado
+        </div>
+        
+        <h3>eventos en tiempo real:</h3>
+        <div id="registro" class="registro">
+            esperando eventos...<br>
+        </div>
+        
+        <div class="instrucciones">
+            <strong>como probar:</strong><br>
+            1. deja esta ventana abierta<br>
+            2. abre postman<br>
+            3. crea un voluntariado con graphql<br>
+            4. mira como aparece aqui al instante
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:4000');
+        const estadoDiv = document.getElementById('estado');
+        const registroDiv = document.getElementById('registro');
+        
+        function agregarLinea(texto, color = '#333') {
+            const hora = new Date().toLocaleTimeString();
+            registroDiv.innerHTML += `<span style="color: ${color}">[${hora}] ${texto}</span><br>`;
+            registroDiv.scrollTop = registroDiv.scrollHeight;
+        }
+        
+        // cuando conecta
+        socket.on('connect', () => {
+            estadoDiv.className = 'estado conectado';
+            estadoDiv.innerHTML = 'conectado - id: ' + socket.id;
+            agregarLinea('conectado al servidor', '#28a745');
+        });
+        
+        // mensaje de bienvenida
+        socket.on('welcome', (data) => {
+            agregarLinea('servidor dice: ' + data.mensaje, '#17a2b8');
+        });
+        
+        // nuevo voluntariado
+        socket.on('voluntariado_creado', (vol) => {
+            agregarLinea('NUEVO VOLUNTARIADO CREADO', '#2196F3');
+            agregarLinea('  id: ' + vol.id, '#666');
+            agregarLinea('  titulo: ' + vol.titulo, '#666');
+            agregarLinea('  email: ' + vol.email, '#666');
+            agregarLinea('  tipo: ' + vol.tipo, '#666');
+            agregarLinea('', '#666');
+        });
+        
+        // voluntariado modificado
+        socket.on('voluntariado_actualizado', (vol) => {
+            agregarLinea('VOLUNTARIADO ACTUALIZADO', '#ff9800');
+            agregarLinea('  id: ' + vol.id, '#666');
+            agregarLinea('  titulo: ' + vol.titulo, '#666');
+            agregarLinea('', '#666');
+        });
+        
+        // voluntariado borrado
+        socket.on('voluntariado_eliminado', (data) => {
+            agregarLinea('VOLUNTARIADO ELIMINADO', '#f44336');
+            agregarLinea('  id: ' + data.id, '#666');
+            agregarLinea('', '#666');
+        });
+        
+        // cuando desconecta
+        socket.on('disconnect', () => {
+            estadoDiv.className = 'estado desconectado';
+            estadoDiv.innerHTML = 'desconectado';
+            agregarLinea('desconectado del servidor', '#dc3545');
+        });
+        
+        // errores
+        socket.on('error', (err) => {
+            agregarLinea('error: ' + err, '#dc3545');
+        });
+        
+        // avisar al servidor que estamos listos
+        socket.emit('join', { usuario: 'test' });
+    </script>
+</body>
+</html>

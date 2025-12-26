@@ -1,94 +1,108 @@
+// src/index.js
 
-
-
-// Importacioens
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
 import { createApolloServer, getGraphQLMiddleware } from './graphql/apolloServer.js';
 import { connectDB } from './config/database.js';
+import { initializeSocket } from './sockets/socketHandler.js';
 import usuariosRoutes from './routes/usuariosRoutes.js';
 import voluntariadosRoutes from './routes/voluntariadosRoutes.js';
-
-
-// Configuración inicial
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// MIDDLEWARES GLOBALES
+// crear servidor http (necesario para socket.io)
+const httpServer = createServer(app);
+
+// middlewares
 app.use(cors());
 app.use(express.json());
 
-// RUTA DE BIENVENIDA
+// ruta principal
 app.get('/', (req, res) => {
     res.json({ 
-        mensaje: 'API de Voluntariados - Backend con GraphQL y MongoDB',
-        version: '3.0.0',
+        mensaje: 'api de voluntariados - backend con graphql, mongodb y websockets',
+        version: '4.0.0',
         endpoints: {
             graphql: '/graphql',
             rest_usuarios: '/api/usuarios',
-            rest_voluntariados: '/api/voluntariados'
+            rest_voluntariados: '/api/voluntariados',
+            websocket: 'socket.io habilitado'
         },
-        database: 'MongoDB Atlas',
-        info: 'Usa /graphql para consultas GraphQL (recomendado)'
+        database: 'mongodb atlas',
+        features: ['graphql', 'rest api', 'websockets', 'mongoose', 'roles'],
+        info: 'usa /graphql para consultas graphql'
     });
 });
 
-// FUNCION PRINCIPAL - INICIAR SERVIDOR
+// iniciar servidor
 async function startServer() {
     try {
-        // Paso 1: Conectar a MongoDB
-        console.log('[INICIO] Conectando a MongoDB Atlas...');
+        // conectar a mongodb
+        console.log('[inicio] conectando a mongodb atlas...');
         await connectDB();
         
-        // Paso 2: Crear servidor Apollo GraphQL
-        console.log('[INICIO] Creando servidor Apollo GraphQL...');
+        // inicializar websockets
+        console.log('[inicio] inicializando websockets...');
+        initializeSocket(httpServer);
+        
+        // crear servidor apollo graphql
+        console.log('[inicio] creando servidor apollo graphql...');
         const apolloServer = await createApolloServer();
         
-        // Paso 3: Integrar GraphQL con Express
+        // integrar graphql con express
         app.use('/graphql', getGraphQLMiddleware(apolloServer));
         
-        // Paso 4: Rutas REST (mantenemos para compatibilidad)
+        // rutas rest
         app.use('/api/usuarios', usuariosRoutes);
         app.use('/api/voluntariados', voluntariadosRoutes);
         
-        // Paso 5: Ruta 404 - No encontrada
+        // ruta 404
         app.use((req, res) => {
             res.status(404).json({
                 ok: false,
-                mensaje: 'Endpoint no encontrado',
+                mensaje: 'endpoint no encontrado',
                 ruta: req.url
             });
         });
         
-        // Paso 6: Manejo global de errores
+        // manejo de errores
         app.use((err, req, res, next) => {
-            console.error('[ERROR]', err);
+            console.error('[error]', err);
             res.status(500).json({
                 ok: false,
-                mensaje: 'Error interno del servidor',
+                mensaje: 'error interno del servidor',
                 error: err.message
             });
         });
         
-        // Paso 7: Iniciar servidor Express
-        app.listen(PORT, () => {
-            console.log('SERVIDOR INICIADO CORRECTAMENTE');
-            console.log('URL Base: http://localhost:' + PORT);
-            console.log('Base de datos: MongoDB Atlas');
-            console.log('ENDPOINTS DISPONIBLES:');
-            console.log('GraphQL API: http://localhost:' + PORT + '/graphql');
-            console.log('REST Usuarios: http://localhost:' + PORT + '/api/usuarios');
-            console.log('REST Voluntariados: http://localhost:' + PORT + '/api/voluntariados');
+        // iniciar servidor
+        httpServer.listen(PORT, () => {
+            console.log('');
+            console.log('════════════════════════════════════════════════');
+            console.log('  SERVIDOR INICIADO CORRECTAMENTE');
+            console.log('════════════════════════════════════════════════');
+            console.log('');
+            console.log('url base: http://localhost:' + PORT);
+            console.log('base de datos: mongodb atlas');
+            console.log('');
+            console.log('endpoints:');
+            console.log('  - graphql: http://localhost:' + PORT + '/graphql');
+            console.log('  - rest usuarios: http://localhost:' + PORT + '/api/usuarios');
+            console.log('  - rest voluntariados: http://localhost:' + PORT + '/api/voluntariados');
+            console.log('  - websocket: socket.io habilitado');
+            console.log('');
+            console.log('features: mongoose, graphql, websockets, roles');
+            console.log('');
         });
         
     } catch (error) {
-        console.error('[ERROR FATAL] No se pudo iniciar el servidor:', error.message);
-        console.error('Detalles:', error);
+        console.error('[error fatal] no se pudo iniciar el servidor:', error.message);
+        console.error('detalles:', error);
         process.exit(1);
     }
 }
 
-// Ejecucuión
 startServer();
