@@ -16,7 +16,6 @@ const voluntariadoSchema = new mongoose.Schema({
         type: String,
         required: [true, 'El email es obligatorio'],
         trim: true,
-        lowercase: true
     },
     fecha: {
         type: String,

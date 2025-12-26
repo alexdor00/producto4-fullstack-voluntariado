@@ -5,11 +5,7 @@ import Voluntariado from '../models/Voluntariado.js';
 import { generarToken } from '../utils/jwt.js';
 
 /**
- * Verifica que el usuario esté autenticado
- * @param {Object} context - contexto de GraphQL con usuario
- * @param {Boolean} requiereAdmin - si requiere rol de admin
- * @throws {Error} si no está autenticado o no es admin
- * @returns {Object} usuario autenticado
+ * Verifica autenticación y opcionalmente rol admin
  */
 function verificarAuth(context, requiereAdmin = false) {
     if (!context.usuario) {
@@ -20,7 +16,7 @@ function verificarAuth(context, requiereAdmin = false) {
         throw new Error('Acceso denegado. Se requiere rol de administrador');
     }
     
-    console.log('[GraphQL Auth] Usuario verificado:', context.usuario.email, '- Rol:', context.usuario.rol);
+    console.log('[GraphQL Auth] Usuario:', context.usuario.email, '- Rol:', context.usuario.rol);
     return context.usuario;
 }
 
@@ -30,70 +26,133 @@ export const resolvers = {
     Query: {
         
         /**
-         * Obtiene todos los usuarios del sistema
+         * Obtiene usuarios según rol:
+         * - Admin: TODOS los usuarios
+         * - Usuario normal: Solo información pública limitada
          */
-        obtenerUsuarios: async () => {
+        obtenerUsuarios: async (_, __, context) => {
             console.log('[GraphQL Query] Obtener usuarios');
-            const usuarios = await Usuario.find().select('-__v');
+            
+            // Verificar autenticación
+            const usuario = verificarAuth(context);
+            
+            // Si es admin, devolver todos
+            if (usuario.rol === 'admin') {
+                const usuarios = await Usuario.find().select('-password -__v');
+                return usuarios;
+            }
+            
+            // Usuario normal: solo devolver información limitada
+            const usuarios = await Usuario.find().select('id nombre email rol -_id');
             return usuarios;
         },
         
         /**
-         * Obtiene un usuario por su email
+         * Obtiene un usuario por email
+         * - Admin: Puede ver cualquier usuario
+         * - Usuario normal: Solo puede ver su propio perfil
          */
-        obtenerUsuario: async (_, { email }) => {
+        obtenerUsuario: async (_, { email }, context) => {
             console.log('[GraphQL Query] Obtener usuario:', email);
-            const usuario = await Usuario.findOne({ email }).select('-__v');
-            return usuario;
+            
+            // Verificar autenticación
+            const usuario = verificarAuth(context);
+            
+            // Si no es admin y intenta ver otro usuario
+            if (usuario.rol !== 'admin' && usuario.email !== email) {
+                throw new Error('No puedes ver información de otros usuarios');
+            }
+            
+            const usuarioEncontrado = await Usuario.findOne({ email }).select('-password -__v');
+            return usuarioEncontrado;
         },
         
         /**
-         * Obtiene todos los voluntariados
+         * Obtiene voluntariados según rol:
+         * - Admin: TODOS los voluntariados
+         * - Usuario normal: Solo SUS voluntariados
          */
-        obtenerVoluntariados: async () => {
+        obtenerVoluntariados: async (_, __, context) => {
             console.log('[GraphQL Query] Obtener voluntariados');
-            const voluntariados = await Voluntariado.find().select('-__v');
+            
+            // Verificar autenticación
+            const usuario = verificarAuth(context);
+            
+            // Si es admin, devolver todos
+            if (usuario.rol === 'admin') {
+                const voluntariados = await Voluntariado.find().select('-__v');
+                return voluntariados;
+            }
+            
+            // Usuario normal: solo sus voluntariados
+            const voluntariados = await Voluntariado.find({ email: usuario.email }).select('-__v');
+            console.log('[GraphQL] Usuario normal - Devolviendo', voluntariados.length, 'voluntariados propios');
             return voluntariados;
         },
         
         /**
          * Obtiene un voluntariado por ID
+         * - Admin: Cualquier voluntariado
+         * - Usuario normal: Solo si es suyo
          */
-        obtenerVoluntariado: async (_, { id }) => {
+        obtenerVoluntariado: async (_, { id }, context) => {
             console.log('[GraphQL Query] Obtener voluntariado:', id);
+            
+            // Verificar autenticación
+            const usuario = verificarAuth(context);
+            
             const voluntariado = await Voluntariado.findOne({ id: parseInt(id) }).select('-__v');
+            
+            if (!voluntariado) {
+                throw new Error('Voluntariado no encontrado');
+            }
+            
+            // Si no es admin y no es el propietario
+            if (usuario.rol !== 'admin' && voluntariado.email !== usuario.email) {
+                throw new Error('No puedes ver voluntariados de otros usuarios');
+            }
+            
             return voluntariado;
         },
         
         /**
-         * Obtiene voluntariados filtrados por tipo
+         * Obtiene voluntariados por tipo
+         * - Admin: Todos del tipo especificado
+         * - Usuario normal: Solo sus voluntariados del tipo especificado
          */
-        obtenerVoluntariadosPorTipo: async (_, { tipo }) => {
+        obtenerVoluntariadosPorTipo: async (_, { tipo }, context) => {
             console.log('[GraphQL Query] Obtener por tipo:', tipo);
-            const voluntariados = await Voluntariado.find({ tipo }).select('-__v');
+            
+            // Verificar autenticación
+            const usuario = verificarAuth(context);
+            
+            // Si es admin, devolver todos del tipo
+            if (usuario.rol === 'admin') {
+                const voluntariados = await Voluntariado.find({ tipo }).select('-__v');
+                return voluntariados;
+            }
+            
+            // Usuario normal: solo sus voluntariados del tipo
+            const voluntariados = await Voluntariado.find({ 
+                tipo, 
+                email: usuario.email 
+            }).select('-__v');
             return voluntariados;
         }
     },
     
-    // MUTATIONS - Operaciones de escritura
     Mutation: {
         
-        /**
-         * Crea un nuevo usuario
-         */
         crearUsuario: async (_, { nombre, email, password, rol }) => {
             console.log('[GraphQL Mutation] Crear usuario:', email);
             
-            // Verificar si el email ya existe
             const existe = await Usuario.findOne({ email });
             if (existe) {
                 throw new Error('El email ya está registrado');
             }
             
-            // Obtener siguiente ID
             const nuevoId = await Usuario.obtenerSiguienteId();
             
-            // Crear usuario
             const nuevoUsuario = new Usuario({
                 id: nuevoId,
                 nombre,
@@ -113,14 +172,9 @@ export const resolvers = {
             };
         },
         
-        /**
-         * Elimina un usuario por email (requiere rol admin)
-         */
         borrarUsuario: async (_, { email }, context) => {
             console.log('[GraphQL Mutation] Borrar usuario:', email);
-            
-            // Verificar autenticación y rol admin
-            verificarAuth(context, true);
+            verificarAuth(context, true); // Solo admin
             
             const result = await Usuario.deleteOne({ email });
             
@@ -134,9 +188,6 @@ export const resolvers = {
             };
         },
         
-        /**
-         * Autentica un usuario (login) y devuelve token JWT
-         */
         loginUsuario: async (_, { email, password }) => {
             console.log('[GraphQL Mutation] Login usuario:', email);
             
@@ -160,7 +211,6 @@ export const resolvers = {
                 };
             }
             
-            // Generar token JWT
             const token = generarToken({
                 id: usuario.id,
                 email: usuario.email,
@@ -180,19 +230,12 @@ export const resolvers = {
             };
         },
         
-        /**
-         * Crea un nuevo voluntariado (requiere autenticación)
-         */
         crearVoluntariado: async (_, { titulo, email, fecha, descripcion, tipo }, context) => {
             console.log('[GraphQL Mutation] Crear voluntariado:', titulo);
-            
-            // Verificar autenticación
             verificarAuth(context);
             
-            // Obtener siguiente ID
             const nuevoId = await Voluntariado.obtenerSiguienteId();
             
-            // Crear voluntariado
             const nuevoVoluntariado = new Voluntariado({
                 id: nuevoId,
                 titulo,
@@ -214,20 +257,24 @@ export const resolvers = {
             };
         },
         
-        /**
-         * Elimina un voluntariado por ID (requiere autenticación)
-         */
         borrarVoluntariado: async (_, { id }, context) => {
             console.log('[GraphQL Mutation] Borrar voluntariado:', id);
             
-            // Verificar autenticación
-            verificarAuth(context);
+            const usuario = verificarAuth(context);
             
-            const result = await Voluntariado.deleteOne({ id: parseInt(id) });
+            // Buscar voluntariado
+            const voluntariado = await Voluntariado.findOne({ id: parseInt(id) });
             
-            if (result.deletedCount === 0) {
+            if (!voluntariado) {
                 throw new Error('Voluntariado no encontrado');
             }
+            
+            // Verificar permisos: admin o propietario
+            if (usuario.rol !== 'admin' && voluntariado.email !== usuario.email) {
+                throw new Error('No puedes eliminar voluntariados de otros usuarios');
+            }
+            
+            await Voluntariado.deleteOne({ id: parseInt(id) });
             
             return {
                 ok: true,
@@ -235,16 +282,23 @@ export const resolvers = {
             };
         },
         
-        /**
-         * Actualiza un voluntariado existente (requiere autenticación)
-         */
         actualizarVoluntariado: async (_, { id, titulo, email, fecha, descripcion, tipo }, context) => {
             console.log('[GraphQL Mutation] Actualizar voluntariado:', id);
             
-            // Verificar autenticación
-            verificarAuth(context);
+            const usuario = verificarAuth(context);
             
-            // Preparar actualización
+            // Buscar voluntariado
+            const voluntariado = await Voluntariado.findOne({ id: parseInt(id) });
+            
+            if (!voluntariado) {
+                throw new Error('Voluntariado no encontrado');
+            }
+            
+            // Verificar permisos: admin o propietario
+            if (usuario.rol !== 'admin' && voluntariado.email !== usuario.email) {
+                throw new Error('No puedes actualizar voluntariados de otros usuarios');
+            }
+            
             const actualizacion = {};
             if (titulo) actualizacion.titulo = titulo;
             if (email) actualizacion.email = email;
@@ -257,10 +311,6 @@ export const resolvers = {
                 actualizacion,
                 { new: true, runValidators: true }
             );
-            
-            if (!voluntarioActualizado) {
-                throw new Error('Voluntariado no encontrado');
-            }
             
             return {
                 id: voluntarioActualizado.id,
