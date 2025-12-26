@@ -1,4 +1,3 @@
-
 import Usuario from '../models/Usuario.js';
 import Voluntariado from '../models/Voluntariado.js';
 import { generarToken } from '../utils/jwt.js';
@@ -33,11 +32,12 @@ export const resolvers = {
             const usuario = verificarAuth(context);
             
             // admin ve todos sin password, usuario normal ve lista basica
+            // usar lean() para mejor rendimiento en queries de solo lectura
             if (usuario.rol === 'admin') {
-                return await Usuario.find().select('-password -__v');
+                return await Usuario.find().select('-password -__v').lean();
             }
             
-            return await Usuario.find().select('id nombre email rol -_id');
+            return await Usuario.find().select('id nombre email rol -_id').lean();
         },
         
         // obtener usuario por email
@@ -51,7 +51,7 @@ export const resolvers = {
                 throw new Error('no puedes ver informacion de otros usuarios');
             }
             
-            return await Usuario.findOne({ email }).select('-password -__v');
+            return await Usuario.findOne({ email }).select('-password -__v').lean();
         },
         
         // obtener voluntariados
@@ -62,10 +62,10 @@ export const resolvers = {
             
             // admin ve todos, usuario normal solo los suyos
             if (usuario.rol === 'admin') {
-                return await Voluntariado.find().select('-__v');
+                return await Voluntariado.find().select('-__v').lean();
             }
             
-            const voluntariados = await Voluntariado.find({ email: usuario.email }).select('-__v');
+            const voluntariados = await Voluntariado.find({ email: usuario.email }).select('-__v').lean();
             console.log('usuario normal - encontrados', voluntariados.length, 'voluntariados');
             return voluntariados;
         },
@@ -75,7 +75,7 @@ export const resolvers = {
             console.log('[query] obtener voluntariado id:', id);
             
             const usuario = verificarAuth(context);
-            const voluntariado = await Voluntariado.findOne({ id: parseInt(id) }).select('-__v');
+            const voluntariado = await Voluntariado.findOne({ id: parseInt(id) }).select('-__v').lean();
             
             if (!voluntariado) {
                 throw new Error('voluntariado no encontrado');
@@ -96,10 +96,10 @@ export const resolvers = {
             const usuario = verificarAuth(context);
             
             if (usuario.rol === 'admin') {
-                return await Voluntariado.find({ tipo }).select('-__v');
+                return await Voluntariado.find({ tipo }).select('-__v').lean();
             }
             
-            return await Voluntariado.find({ tipo, email: usuario.email }).select('-__v');
+            return await Voluntariado.find({ tipo, email: usuario.email }).select('-__v').lean();
         }
     },
     
@@ -122,13 +122,19 @@ export const resolvers = {
                 id: nuevoId,
                 nombre,
                 email,
-                password,
+                password, // se encriptara automaticamente en el hook pre-save
                 rol: rol || 'usuario'
             });
             
             await nuevoUsuario.save();
             
-            return nuevoUsuario;
+            // devolver sin password
+            return {
+                id: nuevoUsuario.id,
+                nombre: nuevoUsuario.nombre,
+                email: nuevoUsuario.email,
+                rol: nuevoUsuario.rol
+            };
         },
         
         // eliminar usuario (solo admin)
@@ -152,6 +158,7 @@ export const resolvers = {
         loginUsuario: async (_, { email, password }) => {
             console.log('[mutation] login:', email);
             
+            // buscar usuario (necesitamos el password para comparar)
             const usuario = await Usuario.findOne({ email });
             
             if (!usuario) {
@@ -163,7 +170,10 @@ export const resolvers = {
                 };
             }
             
-            if (usuario.password !== password) {
+            // comparar password con bcrypt
+            const passwordValido = await usuario.compararPassword(password);
+            
+            if (!passwordValido) {
                 return {
                     ok: false,
                     mensaje: 'contrasena incorrecta',
