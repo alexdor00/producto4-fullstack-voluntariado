@@ -16,7 +16,6 @@ const usuarioSchema = new mongoose.Schema({
     email: {
         type: String,
         required: [true, 'el email es obligatorio'],
-        unique: true,
         trim: true,
         match: [/^\S+@\S+\.\S+$/, 'email no valido']
     },
@@ -39,8 +38,8 @@ const usuarioSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// indices para optimizar busquedas
-usuarioSchema.index({ email: 1 });
+// indices para optimizar busquedas (sin duplicados)
+usuarioSchema.index({ email: 1 }, { unique: true });
 usuarioSchema.index({ rol: 1 });
 usuarioSchema.index({ fechaCreacion: -1 });
 
