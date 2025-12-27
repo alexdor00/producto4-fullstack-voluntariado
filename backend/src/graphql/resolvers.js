@@ -25,19 +25,15 @@ export const resolvers = {
     
     Query: {
         
-        // obtener todos los usuarios
+        // obtener todos los usuarios (SOLO ADMIN)
         obtenerUsuarios: async (_, __, context) => {
             console.log('[query] obtener usuarios');
             
-            const usuario = verificarAuth(context);
+            // REQUIERE ROL ADMIN
+            const usuario = verificarAuth(context, true);
             
-            // admin ve todos sin password, usuario normal ve lista basica
-            // usar lean() para mejor rendimiento en queries de solo lectura
-            if (usuario.rol === 'admin') {
-                return await Usuario.find().select('-password -__v').lean();
-            }
-            
-            return await Usuario.find().select('id nombre email rol -_id').lean();
+            // solo admin puede ver usuarios
+            return await Usuario.find().select('-password -__v').lean();
         },
         
         // obtener usuario por email
@@ -202,10 +198,16 @@ export const resolvers = {
             };
         },
         
-        // crear voluntariado
+        // crear voluntariado (SOLO PUEDE USAR SU PROPIO EMAIL)
         crearVoluntariado: async (_, { titulo, email, fecha, descripcion, tipo }, context) => {
             console.log('[mutation] crear voluntariado:', titulo);
-            verificarAuth(context);
+            
+            const usuario = verificarAuth(context);
+            
+            // SEGURIDAD: solo puede crear con su propio email (excepto admin)
+            if (usuario.rol !== 'admin' && email !== usuario.email) {
+                throw new Error('solo puedes crear voluntariados con tu propio email');
+            }
             
             const nuevoId = await Voluntariado.obtenerSiguienteId();
             
