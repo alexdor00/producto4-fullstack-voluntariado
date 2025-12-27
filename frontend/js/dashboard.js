@@ -16,6 +16,30 @@ function mostrarUsuarioActivo() {
     }
 }
 
+// mostrar menu segun rol
+function mostrarMenuSegunRol() {
+    const usuario = almacenaje.obtenerUsuarioActivo();
+    const menuUsuarios = document.getElementById('menuUsuarios');
+    
+    if (usuario && usuario.rol === 'admin' && menuUsuarios) {
+        menuUsuarios.style.display = 'block';
+    }
+}
+
+// cerrar sesion
+function configurarLogout() {
+    const btnLogout = document.getElementById('btnLogout');
+    const usuario = almacenaje.obtenerUsuarioActivo();
+    
+    if (usuario && btnLogout) {
+        btnLogout.style.display = 'inline-block';
+        btnLogout.addEventListener('click', function() {
+            almacenaje.cerrarSesion();
+            window.location.href = 'pages/login.html';
+        });
+    }
+}
+
 async function renderizarTarjetas() {
     const grid = document.getElementById('gridVoluntariados');
     grid.innerHTML = '<div class="col-12 text-center"><p class="text-white">Cargando...</p></div>';
@@ -156,6 +180,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     await almacenaje.inicializarVoluntariadosEjemplo();
     mostrarUsuarioActivo();
+    mostrarMenuSegunRol(); // ocultar menu usuarios si no es admin
+    configurarLogout();
     
     voluntariadosSeleccionados = await almacenaje.obtenerSeleccion();
     

@@ -1,8 +1,6 @@
-// Gestión de voluntariados con IndexedDB
-
 import { almacenaje } from '../js/almacenaje.js';
 
-// 1. MOSTRAR USUARIO ACTIVO EN NAVBAR
+// mostrar usuario activo
 function mostrarUsuarioActivo() {
     const label = document.getElementById('usuarioActivoLabel');
     const usuario = almacenaje.obtenerUsuarioActivo();
@@ -16,23 +14,53 @@ function mostrarUsuarioActivo() {
     }
 }
 
-// 2. CARGAR TABLA DE VOLUNTARIADOS
+// cerrar sesion
+function configurarLogout() {
+    const btnLogout = document.getElementById('btnLogout');
+    const usuario = almacenaje.obtenerUsuarioActivo();
+    
+    if (usuario && btnLogout) {
+        btnLogout.style.display = 'inline-block';
+        btnLogout.addEventListener('click', function() {
+            almacenaje.cerrarSesion();
+            window.location.href = 'login.html';
+        });
+    }
+}
+
+// configurar campo email
+function configurarCampoEmail() {
+    const usuario = almacenaje.obtenerUsuarioActivo();
+    const campoEmail = document.getElementById('email');
+    
+    if (usuario && campoEmail) {
+        // auto-rellenar con email del usuario
+        campoEmail.value = usuario.email;
+        
+        // bloquear si no es admin
+        if (usuario.rol !== 'admin') {
+            campoEmail.readOnly = true;
+            campoEmail.style.backgroundColor = '#495057';
+            campoEmail.style.cursor = 'not-allowed';
+        }
+    }
+}
+
+// cargar tabla de voluntariados
 async function cargarTablaVoluntariados() {
     const tbody = document.getElementById('tablaVoluntariados');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">cargando...</td></tr>';
     
     try {
-        // Obtener todos los voluntariados de IndexedDB
         const voluntariados = await almacenaje.obtenerVoluntariados();
         
-        tbody.innerHTML = ''; // Limpiar
+        tbody.innerHTML = '';
         
         if (voluntariados.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay voluntariados</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">no hay voluntariados</td></tr>';
             return;
         }
         
-        // Crear una fila por cada voluntariado
         voluntariados.forEach(vol => {
             const fila = document.createElement('tr');
             fila.className = 'text-center';
@@ -57,18 +85,17 @@ async function cargarTablaVoluntariados() {
             tbody.appendChild(fila);
         });
         
-        // Añadir eventos a botones de borrar
         agregarEventosBorrar();
         
-        console.log('Tabla cargada:', voluntariados.length, 'voluntariados');
+        console.log('tabla cargada:', voluntariados.length, 'voluntariados');
         
     } catch (error) {
-        console.error('Error al cargar tabla:', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error al cargar</td></tr>';
+        console.error('error al cargar tabla:', error);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">error al cargar</td></tr>';
     }
 }
 
-// 3. EVENTOS DE BORRAR
+// eventos de borrar
 function agregarEventosBorrar() {
     const botones = document.querySelectorAll('.btn-borrar');
     
@@ -80,50 +107,37 @@ function agregarEventosBorrar() {
     });
 }
 
-// 4. BORRAR VOLUNTARIADO
+// borrar voluntariado
 async function borrarVoluntariado(id) {
     try {
         await almacenaje.borrarVoluntariado(id);
         
-        // Recargar tabla y gráfico
         await cargarTablaVoluntariados();
         await dibujarGrafico();
         
-        mostrarAlerta('Voluntariado borrado correctamente', 'success');
+        mostrarAlerta('voluntariado borrado correctamente', 'success');
         
     } catch (error) {
-        console.error('Error al borrar:', error);
-        mostrarAlerta('Error al borrar el voluntariado', 'danger');
+        console.error('error al borrar:', error);
+        mostrarAlerta('error al borrar el voluntariado', 'danger');
     }
 }
 
-// 5. DAR DE ALTA VOLUNTARIADO
+// dar de alta voluntariado
 async function altaVoluntariado(event) {
     event.preventDefault();
     
-    // Obtener valores del formulario
     const titulo = document.getElementById('titulo').value.trim();
     const email = document.getElementById('email').value.trim();
     const fecha = document.getElementById('fecha').value;
     const descripcion = document.getElementById('descripcion').value.trim();
     const tipo = document.getElementById('tipo').value;
     
-    // Validar campos vacíos
     if (!titulo || !email || !fecha || !descripcion) {
-        mostrarAlerta('Todos los campos son obligatorios', 'warning');
+        mostrarAlerta('todos los campos son obligatorios', 'warning');
         return;
     }
     
-    // Validar que el email existe en usuarios
-    const usuarios = almacenaje.obtenerUsuarios();
-    const usuarioExiste = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (!usuarioExiste) {
-        mostrarAlerta('El email no esta registrado. Debe registrarse primero en Alta Usuario', 'danger');
-        return;
-    }
-    
-    // Crear objeto voluntariado
     const nuevoVoluntariado = {
         titulo: titulo.toUpperCase(),
         email: email,
@@ -133,25 +147,23 @@ async function altaVoluntariado(event) {
     };
     
     try {
-        // Guardar en IndexedDB
         await almacenaje.crearVoluntariado(nuevoVoluntariado);
         
-        // Recargar tabla y gráfico
         await cargarTablaVoluntariados();
         await dibujarGrafico();
         
-        // Limpiar formulario
         document.getElementById('formVoluntariado').reset();
+        configurarCampoEmail(); // re-establecer email
         
-        mostrarAlerta('Voluntariado creado correctamente', 'success');
+        mostrarAlerta('voluntariado creado correctamente', 'success');
         
     } catch (error) {
-        console.error('Error al crear voluntariado:', error);
-        mostrarAlerta('Error al crear el voluntariado', 'danger');
+        console.error('error al crear voluntariado:', error);
+        mostrarAlerta('error: ' + error.message, 'danger');
     }
 }
 
-// 6. MOSTRAR ALERTAS
+// mostrar alertas
 function mostrarAlerta(mensaje, tipo) {
     const alerta = document.getElementById('alerta');
     
@@ -164,38 +176,31 @@ function mostrarAlerta(mensaje, tipo) {
     }, 3000);
 }
 
-// 7. DIBUJAR GRÁFICO CON CANVAS
+// dibujar grafico con canvas
 async function dibujarGrafico() {
     const canvas = document.getElementById('graficoVoluntariados');
     const ctx = canvas.getContext('2d');
     
     try {
-        // Obtener datos
         const voluntariados = await almacenaje.obtenerVoluntariados();
         
-        // Contar peticiones y ofertas
         const ofertas = voluntariados.filter(v => v.tipo === 'Oferta').length;
         const peticiones = voluntariados.filter(v => v.tipo === 'Petición').length;
         
-        // Limpiar canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Configuración del gráfico
         const barWidth = 120;
         const barSpacing = 150;
         const maxHeight = 250;
         const baseY = 320;
         const maxValue = Math.max(ofertas, peticiones, 1);
         
-        // Calcular alturas proporcionales
         const alturaOfertas = (ofertas / maxValue) * maxHeight;
         const alturaPeticiones = (peticiones / maxValue) * maxHeight;
         
-        // Posiciones X centradas
         const xOfertas = 200;
         const xPeticiones = xOfertas + barWidth + barSpacing;
         
-        // DIBUJAR BARRA OFERTAS (Verde con sombra)
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 10;
         ctx.shadowOffsetX = 3;
@@ -204,39 +209,25 @@ async function dibujarGrafico() {
         ctx.fillStyle = '#8ab893';
         ctx.fillRect(xOfertas, baseY - alturaOfertas, barWidth, alturaOfertas);
         
-        // DIBUJAR BARRA PETICIONES (Naranja con sombra)
         ctx.fillStyle = '#e0ac69';
         ctx.fillRect(xPeticiones, baseY - alturaPeticiones, barWidth, alturaPeticiones);
         
-        // Resetear sombra
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
         
-        // ETIQUETAS DE NÚMEROS (encima de las barras)
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 24px Poppins';
         ctx.textAlign = 'center';
         
-        // Número Ofertas
         ctx.fillText(ofertas.toString(), xOfertas + barWidth/2, baseY - alturaOfertas - 15);
-        
-        // Número Peticiones
         ctx.fillText(peticiones.toString(), xPeticiones + barWidth/2, baseY - alturaPeticiones - 15);
         
-        // ETIQUETAS DE TEXTO (debajo de las barras)
         ctx.font = 'bold 18px Poppins';
-        
-        // Texto Ofertas
         ctx.fillText('OFERTAS', xOfertas + barWidth/2, baseY + 30);
-        
-        // Texto Peticiones
         ctx.fillText('PETICIONES', xPeticiones + barWidth/2, baseY + 30);
         
-        
-        
-        // LÍNEA BASE
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -244,32 +235,28 @@ async function dibujarGrafico() {
         ctx.lineTo(650, baseY);
         ctx.stroke();
         
-        console.log('Grafico dibujado - Ofertas:', ofertas, 'Peticiones:', peticiones);
+        console.log('grafico dibujado - ofertas:', ofertas, 'peticiones:', peticiones);
         
     } catch (error) {
-        console.error('Error al dibujar grafico:', error);
+        console.error('error al dibujar grafico:', error);
     }
 }
 
-// 8. INICIALIZACIÓN AL CARGAR LA PÁGINA
+// inicializacion
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('=== PAGINA VOLUNTARIADOS CARGADA ===');
+    console.log('=== pagina voluntariados cargada ===');
     
-    // 0. Inicializar voluntariados de ejemplo (solo primera vez)
     await almacenaje.inicializarVoluntariadosEjemplo();
     
-    // 1. Mostrar usuario activo
     mostrarUsuarioActivo();
+    configurarLogout();
+    configurarCampoEmail(); // bloquear email si no es admin
     
-    // 2. Cargar tabla inicial
     await cargarTablaVoluntariados();
-    
-    // 3. Dibujar gráfico inicial
     await dibujarGrafico();
     
-    // 4. Registrar evento del formulario
     const formulario = document.getElementById('formVoluntariado');
     formulario.addEventListener('submit', altaVoluntariado);
     
-    console.log('Pagina lista');
+    console.log('pagina lista');
 });

@@ -1,7 +1,6 @@
-//Con localStorage
-import { almacenaje } from './almacenaje.js';
+import { almacenaje } from '../js/almacenaje.js';
 
-// MOSTRAR USUARIO ACTIVO EN NAVBAR
+// mostrar usuario activo en navbar
 function mostrarUsuarioActivo() {
     const userStatus = document.getElementById('userStatus');
     const usuario = almacenaje.obtenerUsuarioActivo();
@@ -17,18 +16,32 @@ function mostrarUsuarioActivo() {
     }
 }
 
-// CARGAR TABLA DE USUARIOS
-function cargarTablaUsuarios() {
+// cerrar sesion
+function configurarLogout() {
+    const btnLogout = document.getElementById('btnLogout');
+    const usuario = almacenaje.obtenerUsuarioActivo();
+    
+    if (usuario && btnLogout) {
+        btnLogout.style.display = 'inline-block';
+        btnLogout.addEventListener('click', function() {
+            almacenaje.cerrarSesion();
+            window.location.href = 'login.html';
+        });
+    }
+}
+
+// cargar tabla de usuarios
+async function cargarTablaUsuarios() {
     const tbody = document.getElementById('tablaUsuarios');
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">cargando...</td></tr>';
     
     try {
-        const usuarios = almacenaje.obtenerUsuarios();
+        const usuarios = await almacenaje.obtenerUsuarios();
         
         tbody.innerHTML = '';
         
         if (usuarios.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay usuarios</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center">no hay usuarios</td></tr>';
             return;
         }
         
@@ -39,7 +52,7 @@ function cargarTablaUsuarios() {
             fila.innerHTML = `
                 <td class="fw-bold">${usuario.nombre}</td>
                 <td>${usuario.email}</td>
-                <td>${usuario.password}</td>
+                <td>${usuario.rol || 'usuario'}</td>
                 <td>
                     <button class="btn btn-danger btn-sm btn-borrar" data-email="${usuario.email}">
                         BORRAR
@@ -52,40 +65,47 @@ function cargarTablaUsuarios() {
         
         agregarEventosBorrar();
         
-        console.log('Tabla cargada:', usuarios.length, 'usuarios');
+        console.log('tabla cargada:', usuarios.length, 'usuarios');
         
     } catch (error) {
-        console.error('Error al cargar tabla:', error);
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar</td></tr>';
+        console.error('error al cargar tabla:', error);
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">error al cargar</td></tr>';
     }
 }
 
-// EVENTOS DE BORRAR
+// eventos de borrar
 function agregarEventosBorrar() {
     const botones = document.querySelectorAll('.btn-borrar');
     
     botones.forEach(boton => {
-        boton.addEventListener('click', function() {
+        boton.addEventListener('click', async function() {
             const email = this.getAttribute('data-email');
-            borrarUsuario(email);
+            await borrarUsuario(email);
         });
     });
 }
 
-// BORRAR USUARIO
-function borrarUsuario(email) {
-    const resultado = almacenaje.borrarUsuario(email);
-    
-    if (resultado.ok) {
-        cargarTablaUsuarios();
-        console.log('Usuario borrado:', email);
-    } else {
-        alert('Error al borrar usuario');
+// borrar usuario
+async function borrarUsuario(email) {
+    try {
+        const resultado = await almacenaje.borrarUsuario(email);
+        
+        if (resultado.ok) {
+            await cargarTablaUsuarios();
+            console.log('usuario borrado:', email);
+            alert('usuario eliminado correctamente');
+        } else {
+            alert('error al borrar usuario');
+        }
+        
+    } catch (error) {
+        console.error('error al borrar:', error);
+        alert('error al borrar usuario');
     }
 }
 
-// ALTA DE USUARIO
-function altaUsuario(event) {
+// alta de usuario
+async function altaUsuario(event) {
     event.preventDefault();
     
     const nombre = document.getElementById('nombre').value.trim();
@@ -93,7 +113,7 @@ function altaUsuario(event) {
     const password = document.getElementById('password').value.trim();
     
     if (!nombre || !email || !password) {
-        alert('Todos los campos son obligatorios');
+        alert('todos los campos son obligatorios');
         return;
     }
     
@@ -104,28 +124,49 @@ function altaUsuario(event) {
         rol: 'usuario'
     };
     
-    const resultado = almacenaje.crearUsuario(nuevoUsuario);
-    
-    if (resultado.ok) {
-        cargarTablaUsuarios();
-        document.getElementById('formUsuario').reset();
-        alert('Usuario creado correctamente');
-        console.log('Usuario creado:', nuevoUsuario.email);
-    } else {
-        alert(resultado.error);
+    try {
+        const resultado = await almacenaje.crearUsuario(nuevoUsuario);
+        
+        if (resultado.ok) {
+            await cargarTablaUsuarios();
+            document.getElementById('formUsuario').reset();
+            alert('usuario creado correctamente');
+            console.log('usuario creado:', nuevoUsuario.email);
+        } else {
+            alert(resultado.error);
+        }
+        
+    } catch (error) {
+        console.error('error al crear:', error);
+        alert('error al crear usuario');
     }
 }
 
-// INICIALIZACION
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('=== PAGINA USUARIOS CARGADA ===');
+// inicializacion
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('=== pagina usuarios cargada ===');
+    
+    const usuario = almacenaje.obtenerUsuarioActivo();
+    
+    // VERIFICAR QUE SEA ADMIN
+    if (!usuario || usuario.rol !== 'admin') {
+        document.querySelector('.container').innerHTML = `
+            <div class="alert alert-danger text-center mt-5">
+                <h3>ACCESO DENEGADO</h3>
+                <p>Esta sección es solo para administradores.</p>
+                <a href="../index.html" class="btn btn-primary mt-3">VOLVER AL DASHBOARD</a>
+            </div>
+        `;
+        return;
+    }
     
     mostrarUsuarioActivo();
+    configurarLogout();
     
-    cargarTablaUsuarios();
+    await cargarTablaUsuarios();
     
     const formulario = document.getElementById('formUsuario');
     formulario.addEventListener('submit', altaUsuario);
     
-    console.log('Pagina lista');
+    console.log('pagina lista');
 });
