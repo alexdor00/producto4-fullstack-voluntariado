@@ -1,56 +1,200 @@
-// configuracion del backend
+// CONFIGURACION GLOBAL
+
+// url del servidor graphql
 const API_URL = 'http://localhost:4000/graphql';
+
+// token jwt del usuario actual
 let token = localStorage.getItem('token') || null;
+
+// conexion websocket global
 let socket = null;
 
-// inicializar websocket
+// SISTEMA DE CACHE
+
+// almacen de cache en memoria
+const cache = new Map();
+
+// tiempo que los datos se consideran validos: 5 minutos
+const CACHE_DURACION = 5 * 60 * 1000;
+
+// guarda datos en la cache con timestamp
+function guardarEnCache(clave, datos) {
+    cache.set(clave, {
+        datos,
+        timestamp: Date.now()
+    });
+}
+
+// recupera datos de la cache si aun son validos
+function obtenerDeCache(clave) {
+    const entrada = cache.get(clave);
+    if (!entrada) return null;
+    
+    // calcular cuanto tiempo llevan los datos en cache
+    const edad = Date.now() - entrada.timestamp;
+    
+    // si pasaron mas de 5 minutos, borrar y pedir de nuevo
+    if (edad > CACHE_DURACION) {
+        cache.delete(clave);
+        return null;
+    }
+    
+    console.log(`[cache] usando datos cacheados: ${clave}`);
+    return entrada.datos;
+}
+
+// limpia entradas de la cache
+function limpiarCache(patron) {
+    if (patron) {
+        // limpiar solo claves que contengan el patron
+        for (const clave of cache.keys()) {
+            if (clave.includes(patron)) {
+                cache.delete(clave);
+            }
+        }
+    } else {
+        // limpiar toda la cache
+        cache.clear();
+    }
+}
+
+// WEBSOCKET CON RECONEXION AUTOMATICA
+
+// contador de intentos de reconexion
+let intentosReconexion = 0;
+
+// maximo de intentos antes de rendirse
+const MAX_INTENTOS_RECONEXION = 5;
+
+// temporizador para intentos de reconexion
+let intervaloReconexion = null;
+
+// inicializa la conexion websocket con el servidor
 function inicializarWebSocket() {
-    if (socket) return;
+    // evitar conexiones duplicadas
+    if (socket?.connected) {
+        console.log('[websocket] ya conectado');
+        return;
+    }
     
-    socket = io('http://localhost:4000');
+    // crear conexion con opciones de reconexion
+    socket = io('http://localhost:4000', {
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: MAX_INTENTOS_RECONEXION
+    });
     
+    // evento: conexion establecida
     socket.on('connect', () => {
         console.log('[websocket] conectado:', socket.id);
+        intentosReconexion = 0;
+        
+        // limpiar temporizador de reconexion manual si existia
+        if (intervaloReconexion) {
+            clearInterval(intervaloReconexion);
+            intervaloReconexion = null;
+        }
     });
     
-    socket.on('disconnect', () => {
-        console.log('[websocket] desconectado');
+    // evento: desconexion
+    socket.on('disconnect', (razon) => {
+        console.log('[websocket] desconectado:', razon);
+        
+        // si el servidor cerro la conexion, intentar reconectar
+        if (razon === 'io server disconnect') {
+            intentarReconexion();
+        }
     });
     
-    // evento: voluntariado creado
+    // evento: error de conexion
+    socket.on('connect_error', (error) => {
+        console.error('[websocket] error de conexion:', error.message);
+        intentarReconexion();
+    });
+    
+    // evento: reconexion exitosa
+    socket.on('reconnect', (numeroIntento) => {
+        console.log(`[websocket] reconectado tras ${numeroIntento} intentos`);
+        // refrescar datos tras reconectar
+        limpiarCache('voluntariados');
+    });
+    
+    // evento: todos los intentos de reconexion fallaron
+    socket.on('reconnect_failed', () => {
+        console.error('[websocket] reconexion fallida tras multiples intentos');
+    });
+    
+    // eventos de voluntariados en tiempo real
+    
+    // nuevo voluntariado creado
     socket.on('voluntariado_creado', (voluntariado) => {
         console.log('[websocket] nuevo voluntariado:', voluntariado.titulo);
-        // disparar evento personalizado para que las paginas lo escuchen
+        limpiarCache('voluntariados');
         window.dispatchEvent(new CustomEvent('voluntariado-creado', { 
             detail: voluntariado 
         }));
     });
     
-    // evento: voluntariado actualizado
+    // voluntariado actualizado
     socket.on('voluntariado_actualizado', (voluntariado) => {
         console.log('[websocket] voluntariado actualizado:', voluntariado.id);
+        limpiarCache('voluntariados');
         window.dispatchEvent(new CustomEvent('voluntariado-actualizado', { 
             detail: voluntariado 
         }));
     });
     
-    // evento: voluntariado eliminado
+    // voluntariado eliminado
     socket.on('voluntariado_eliminado', (data) => {
         console.log('[websocket] voluntariado eliminado:', data.id);
+        limpiarCache('voluntariados');
         window.dispatchEvent(new CustomEvent('voluntariado-eliminado', { 
             detail: data 
         }));
     });
 }
 
-// funcion auxiliar para graphql
-async function consultarGraphQL(query, variables = {}) {
+// intenta reconectar el websocket manualmente
+function intentarReconexion() {
+    // evitar multiples temporizadores
+    if (intervaloReconexion) return;
+    
+    // si ya se intento muchas veces, rendirse
+    if (intentosReconexion >= MAX_INTENTOS_RECONEXION) {
+        console.error('[websocket] maximos intentos de reconexion alcanzados');
+        return;
+    }
+    
+    // intentar reconectar cada 2 segundos
+    intervaloReconexion = setInterval(() => {
+        intentosReconexion++;
+        console.log(`[websocket] intento de reconexion ${intentosReconexion}/${MAX_INTENTOS_RECONEXION}`);
+        
+        if (socket) {
+            socket.connect();
+        } else {
+            inicializarWebSocket();
+        }
+        
+        // si se conecto o se agotaron intentos, parar
+        if (socket?.connected || intentosReconexion >= MAX_INTENTOS_RECONEXION) {
+            clearInterval(intervaloReconexion);
+            intervaloReconexion = null;
+        }
+    }, 2000);
+}
+
+// FETCH CON RETRY AUTOMATICO
+
+// hace peticiones graphql con reintento automatico si falla
+async function consultarGraphQL(query, variables = {}, intentos = 3) {
     try {
         const headers = {
             'Content-Type': 'application/json'
         };
         
-        // añadir token si existe
+        // añadir token si el usuario esta logueado
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
@@ -61,8 +205,14 @@ async function consultarGraphQL(query, variables = {}) {
             body: JSON.stringify({ query, variables })
         });
         
+        // verificar que la respuesta sea correcta
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const resultado = await response.json();
         
+        // manejar errores de graphql
         if (resultado.errors) {
             console.error('[graphql] error:', resultado.errors);
             throw new Error(resultado.errors[0].message);
@@ -72,14 +222,29 @@ async function consultarGraphQL(query, variables = {}) {
         
     } catch (error) {
         console.error('[fetch] error:', error);
+        
+        // si quedan intentos, reintentar tras 1 segundo
+        if (intentos > 1) {
+            console.log(`[fetch] reintentando... (${4 - intentos}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return consultarGraphQL(query, variables, intentos - 1);
+        }
+        
+        // si ya no quedan intentos, lanzar error
         throw error;
     }
 }
 
-// usuarios
+// FUNCIONES DE USUARIOS
 
+// obtiene la lista de todos los usuarios (solo admin)
 export async function obtenerUsuarios() {
     try {
+        // intentar obtener de cache primero
+        const cacheKey = 'usuarios_lista';
+        const datosCacheados = obtenerDeCache(cacheKey);
+        if (datosCacheados) return datosCacheados;
+        
         const query = `
             query {
                 obtenerUsuarios {
@@ -92,7 +257,11 @@ export async function obtenerUsuarios() {
         `;
         
         const data = await consultarGraphQL(query);
-        return data.obtenerUsuarios || [];
+        const usuarios = data.obtenerUsuarios || [];
+        
+        // guardar en cache para proximas peticiones
+        guardarEnCache(cacheKey, usuarios);
+        return usuarios;
         
     } catch (error) {
         console.error('[usuarios] error al obtener:', error);
@@ -100,11 +269,12 @@ export async function obtenerUsuarios() {
     }
 }
 
+// recupera el usuario activo del localstorage
 export function obtenerUsuarioActivo() {
     const usuarioGuardado = localStorage.getItem('usuarioActivo');
     const tokenGuardado = localStorage.getItem('token');
     
-    // si hay usuario y token, restaurar token global
+    // restaurar token y websocket si hay usuario guardado
     if (usuarioGuardado && tokenGuardado) {
         token = tokenGuardado;
         
@@ -117,6 +287,7 @@ export function obtenerUsuarioActivo() {
     return usuarioGuardado ? JSON.parse(usuarioGuardado) : null;
 }
 
+// crea un nuevo usuario (solo admin)
 export async function crearUsuario(usuario) {
     try {
         const query = `
@@ -139,6 +310,9 @@ export async function crearUsuario(usuario) {
         
         const data = await consultarGraphQL(query, variables);
         
+        // limpiar cache de usuarios para que se vuelvan a pedir
+        limpiarCache('usuarios');
+        
         console.log('[usuarios] usuario creado:', data.crearUsuario.email);
         return { ok: true, usuario: data.crearUsuario };
         
@@ -148,6 +322,7 @@ export async function crearUsuario(usuario) {
     }
 }
 
+// elimina un usuario por email (solo admin)
 export async function borrarUsuario(email) {
     try {
         const query = `
@@ -161,6 +336,9 @@ export async function borrarUsuario(email) {
         
         const data = await consultarGraphQL(query, { email });
         
+        // limpiar cache de usuarios
+        limpiarCache('usuarios');
+        
         console.log('[usuarios] usuario borrado:', email);
         return { ok: true };
         
@@ -170,10 +348,9 @@ export async function borrarUsuario(email) {
     }
 }
 
+// actualiza datos de un usuario (no implementado en backend)
 export async function actualizarUsuario(email, datosNuevos) {
     try {
-        // por ahora no hay mutation de actualizar usuario en el backend
-        // se podria implementar si es necesario
         console.warn('[usuarios] actualizar usuario no implementado en backend');
         return { ok: false, error: 'funcion no disponible' };
         
@@ -183,6 +360,7 @@ export async function actualizarUsuario(email, datosNuevos) {
     }
 }
 
+// inicia sesion con email y password
 export async function loguearUsuario(email, password) {
     try {
         const query = `
@@ -204,18 +382,19 @@ export async function loguearUsuario(email, password) {
         const data = await consultarGraphQL(query, { email, password });
         const resultado = data.loginUsuario;
         
+        // verificar si el login fue exitoso
         if (!resultado.ok) {
             return { ok: false, error: resultado.mensaje };
         }
         
-        // guardar token
+        // guardar token en variable global y localstorage
         token = resultado.token;
         localStorage.setItem('token', token);
         
-        // guardar usuario activo
+        // guardar datos del usuario
         localStorage.setItem('usuarioActivo', JSON.stringify(resultado.usuario));
         
-        // inicializar websocket despues del login
+        // inicializar websocket tras login
         inicializarWebSocket();
         
         console.log('[usuarios] login exitoso:', resultado.usuario.nombre);
@@ -227,7 +406,9 @@ export async function loguearUsuario(email, password) {
     }
 }
 
+// cierra sesion y limpia datos
 export function cerrarSesion() {
+    // limpiar token
     token = null;
     localStorage.removeItem('token');
     localStorage.removeItem('usuarioActivo');
@@ -238,18 +419,21 @@ export function cerrarSesion() {
         socket = null;
     }
     
+    // limpiar toda la cache
+    limpiarCache();
+    
     console.log('[usuarios] sesion cerrada');
 }
 
-// voluntariados
-
+// FUNCIONES DE VOLUNTARIADOS
+// inicializa la base de datos (compatibilidad)
 export async function inicializarDB() {
-    // ya no se usa indexeddb, pero mantenemos la funcion para compatibilidad
     console.log('[voluntariados] usando backend graphql');
     inicializarWebSocket();
     return Promise.resolve();
 }
 
+// crea un nuevo voluntariado
 export async function crearVoluntariado(voluntariado) {
     try {
         const query = `
@@ -287,6 +471,9 @@ export async function crearVoluntariado(voluntariado) {
         
         const data = await consultarGraphQL(query, variables);
         
+        // limpiar cache de voluntariados
+        limpiarCache('voluntariados');
+        
         console.log('[voluntariados] creado:', data.crearVoluntariado.id);
         return { ok: true, id: data.crearVoluntariado.id };
         
@@ -296,8 +483,14 @@ export async function crearVoluntariado(voluntariado) {
     }
 }
 
+// obtiene todos los voluntariados del usuario (o todos si es admin)
 export async function obtenerVoluntariados() {
     try {
+        // intentar obtener de cache primero
+        const cacheKey = 'voluntariados_lista';
+        const datosCacheados = obtenerDeCache(cacheKey);
+        if (datosCacheados) return datosCacheados;
+        
         const query = `
             query {
                 obtenerVoluntariados {
@@ -312,9 +505,13 @@ export async function obtenerVoluntariados() {
         `;
         
         const data = await consultarGraphQL(query);
+        const voluntariados = data.obtenerVoluntariados || [];
         
-        console.log('[voluntariados] obtenidos:', data.obtenerVoluntariados.length);
-        return data.obtenerVoluntariados || [];
+        // guardar en cache
+        guardarEnCache(cacheKey, voluntariados);
+        
+        console.log('[voluntariados] obtenidos:', voluntariados.length);
+        return voluntariados;
         
     } catch (error) {
         console.error('[voluntariados] error al obtener:', error);
@@ -322,6 +519,7 @@ export async function obtenerVoluntariados() {
     }
 }
 
+// elimina un voluntariado por id
 export async function borrarVoluntariado(id) {
     try {
         const query = `
@@ -335,6 +533,9 @@ export async function borrarVoluntariado(id) {
         
         const data = await consultarGraphQL(query, { id: parseInt(id) });
         
+        // limpiar cache
+        limpiarCache('voluntariados');
+        
         console.log('[voluntariados] borrado:', id);
         return { ok: true };
         
@@ -344,6 +545,7 @@ export async function borrarVoluntariado(id) {
     }
 }
 
+// actualiza datos de un voluntariado
 export async function actualizarVoluntariado(id, datos) {
     try {
         const query = `
@@ -380,6 +582,9 @@ export async function actualizarVoluntariado(id, datos) {
         
         const data = await consultarGraphQL(query, variables);
         
+        // limpiar cache
+        limpiarCache('voluntariados');
+        
         console.log('[voluntariados] actualizado:', id);
         return { ok: true, voluntariado: data.actualizarVoluntariado };
         
@@ -389,14 +594,14 @@ export async function actualizarVoluntariado(id, datos) {
     }
 }
 
+// inicializa datos de ejemplo (no necesario, datos en mongodb)
 export async function inicializarVoluntariadosEjemplo() {
-    // ya no es necesario inicializar datos de ejemplo
-    // los datos estan en mongodb
     console.log('[voluntariados] datos iniciales en mongodb');
 }
 
-// dashboard - seleccion (mantener en localstorage)
+// FUNCIONES DE DASHBOARD
 
+// guarda la seleccion de voluntariados en localstorage
 export async function guardarSeleccion(voluntariadosSeleccionados) {
     try {
         localStorage.setItem('seleccion', JSON.stringify(voluntariadosSeleccionados));
@@ -408,6 +613,7 @@ export async function guardarSeleccion(voluntariadosSeleccionados) {
     }
 }
 
+// recupera la seleccion guardada
 export async function obtenerSeleccion() {
     try {
         const seleccion = localStorage.getItem('seleccion');
@@ -420,8 +626,7 @@ export async function obtenerSeleccion() {
     }
 }
 
-// exportacion centralizada
-
+// exportacion centralizada de todas las funciones
 export const almacenaje = {
     obtenerUsuarios,
     obtenerUsuarioActivo,
